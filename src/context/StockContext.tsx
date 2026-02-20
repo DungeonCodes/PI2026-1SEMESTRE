@@ -13,6 +13,7 @@ interface StockContextType {
   addOrder: (order: Omit<Order, 'id' | 'status' | 'createdAt'>) => void;
   updateOrderStatus: (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => void;
   restockIngredient: (ingredientId: number, amount: number) => void;
+  addIngredient: (name: string, quantity: number, minQuantity: number) => void;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -112,11 +113,24 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     );
   };
 
+  const addIngredient = (name: string, quantity: number, minQuantity: number) => {
+    setIngredients((prevIngredients) => [
+      ...prevIngredients,
+      {
+        id: prevIngredients.length > 0 ? Math.max(...prevIngredients.map(i => i.id)) + 1 : 1,
+        name,
+        quantity,
+        minQuantity,
+      },
+    ]);
+  };
+
   return (
-    <StockContext.Provider value={{ ingredients, menuItems, orders, addOrder, updateOrderStatus, restockIngredient }}>
+    <StockContext.Provider value={{ ingredients, menuItems, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient }}>
       {children}
     </StockContext.Provider>
   );
+
 };
 
 export const useStock = () => {

@@ -6,10 +6,12 @@
 import React, { useState } from 'react';
 import { useStock } from '../context/StockContext';
 import toast from 'react-hot-toast';
+import AddIngredientModal from '../components/AddIngredientModal';
 
 const Inventory: React.FC = () => {
   const { ingredients, restockIngredient } = useStock();
   const [restockAmounts, setRestockAmounts] = useState<{[key: number]: string}>({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleRestock = (ingredientId: number) => {
     const amount = parseInt(restockAmounts[ingredientId] || '0', 10);
@@ -28,7 +30,15 @@ const Inventory: React.FC = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-2xl font-bold mb-4 text-orange-500">Inventário</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-bold text-orange-500">Inventário</h2>
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
+        >
+          + Novo Ingrediente
+        </button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {ingredients.map((ingredient) => (
           <div
@@ -57,6 +67,7 @@ const Inventory: React.FC = () => {
           </div>
         ))}
       </div>
+      <AddIngredientModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 };
