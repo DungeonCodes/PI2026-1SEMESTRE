@@ -12,8 +12,8 @@ interface StockContextType {
   restockIngredient: (ingredientId: number, amount: number) => Promise<void>;
   addIngredient: (name: string, quantity: number, minQuantity: number, unit: string) => Promise<void>;
   updateIngredient: (id: number, name: string, minQuantity: number, unit: string) => Promise<void>;
-  addProduct: (name: string, price: number, description: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => Promise<void>;
-  updateProduct: (id: number, name: string, price: number, description: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => Promise<void>;
+  addProduct: (nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[], imagem_url?: string) => Promise<void>;
+  updateProduct: (id: number, nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[], imagem_url?: string) => Promise<void>;
   deleteIngredient: (id: number) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
 }
@@ -127,12 +127,17 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
- const addProduct = async (nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => {
+ const addProduct = async (nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[], imagem_url?: string) => {
     const precoFloat = parseFloat(preco as any);
 
     const { data: newProduct, error: productError } = await supabase
       .from('produtos')
-      .insert([{ nome, preco: precoFloat, descricao, imagem_url: `https://picsum.photos/seed/${nome}/400/300` }])
+      .insert([{ 
+        nome, 
+        preco: precoFloat, 
+        descricao, 
+        imagem_url: imagem_url || `https://picsum.photos/seed/${nome}/400/300` 
+      }])
       .select()
       .single();
 
@@ -166,14 +171,17 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     fetchProducts();
   };
 
-  const updateProduct = async (id: number, nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => {
+  const updateProduct = async (id: number, nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[], imagem_url?: string) => {
     try {
       const precoFloat = parseFloat(preco as any);
 
       // 1. Update basic product info
+      const updateData: any = { nome, preco: precoFloat, descricao };
+      if (imagem_url) updateData.imagem_url = imagem_url;
+
       const { error: productError } = await supabase
         .from('produtos')
-        .update({ nome, preco: precoFloat, descricao })
+        .update(updateData)
         .eq('id', id);
 
       if (productError) throw productError;

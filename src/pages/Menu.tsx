@@ -11,6 +11,8 @@ const Menu: React.FC = () => {
   const [descricao, setDescricao] = useState('');
   const [recipeItems, setRecipeItems] = useState<Omit<RecipeItem, 'produto_id'>[]>([]);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleAddIngredient = () => {
     setRecipeItems([...recipeItems, { ingrediente_id: 0, quantidade_gasta: 0 }]);
@@ -54,6 +56,8 @@ const Menu: React.FC = () => {
     setPreco('');
     setDescricao('');
     setRecipeItems([]);
+    setImageFile(null);
+    setUploading(false);
   };
 
   const handleDelete = async (id: number) => {
@@ -62,13 +66,48 @@ const Menu: React.FC = () => {
     }
   };
 
+  const handleUploadImage = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('produtos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('produtos')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      toast.error('Erro ao enviar imagem: ' + error.message);
+      return null;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (nome && preco && descricao && recipeItems.length > 0) {
+      setUploading(true);
+      let imageUrl = undefined;
+
+      if (imageFile) {
+        imageUrl = await handleUploadImage(imageFile);
+        if (!imageUrl) {
+          setUploading(false);
+          return;
+        }
+      }
+
       if (editingProductId) {
-        await updateProduct(editingProductId, nome, parseFloat(preco), descricao, recipeItems);
+        await updateProduct(editingProductId, nome, parseFloat(preco), descricao, recipeItems, imageUrl);
       } else {
-        await addProduct(nome, parseFloat(preco), descricao, recipeItems);
+        await addProduct(nome, parseFloat(preco), descricao, recipeItems, imageUrl);
       }
       resetForm();
     } else {
@@ -127,6 +166,16 @@ const Menu: React.FC = () => {
             ></textarea>
           </div>
 
+          <div className="mb-4">
+            <label className="block text-gray-400 mb-2">Foto do Lanche</label>
+            <input 
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+              className="w-full text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-700"
+            />
+          </div>
+
           <div className="border-t border-gray-700 mt-6 pt-6">
             <h3 className="text-xl font-bold text-orange-500 mb-4">Ficha Técnica (Ingredientes)</h3>
             {recipeItems.map((item, index) => (
@@ -158,8 +207,12 @@ const Menu: React.FC = () => {
             </button>
           </div>
 
-          <button type="submit" className="mt-6 bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded w-full">
-            {editingProductId ? 'Atualizar Produto' : 'Salvar Produto'}
+          <button 
+            type="submit" 
+            disabled={uploading}
+            className="mt-6 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 text-white font-bold py-2 px-4 rounded w-full"
+          >
+            {uploading ? 'Enviando foto...' : (editingProductId ? 'Atualizar Produto' : 'Salvar Produto')}
           </button>
         </form>
         <div>
@@ -167,9 +220,17 @@ const Menu: React.FC = () => {
           <div className="grid grid-cols-1 gap-4">
             {products.map(product => (
               <div key={product.id} className="bg-gray-800 p-4 rounded-lg shadow-md flex justify-between items-center">
-                <div>
-                  <h4 className="font-bold">{product.nome}</h4>
-                  <p className="text-sm text-gray-400">R$ {product.preco.toFixed(2)}</p>
+                <div className="flex items-center space-x-4">
+                  <img 
+                    src={product.imagem_url} 
+                    alt={product.nome} 
+                    className="w-16 h-16 object-cover rounded-md bg-gray-700"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div>
+                    <h4 className="font-bold">{product.nome}</h4>
+                    <p className="text-sm text-gray-400">R$ {product.preco.toFixed(2)}</p>
+                  </div>
                 </div>
                 <div className="flex space-x-2">
                   <button 
