@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { Ingredient, Product, Order, OrderItem } from '../types';
+import { Ingredient, Product, Order, OrderItem, RecipeItem } from '../types';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -12,6 +12,8 @@ interface StockContextType {
   restockIngredient: (ingredientId: number, amount: number) => Promise<void>;
   addIngredient: (name: string, quantity: number, minQuantity: number, unit: string) => Promise<void>;
   addProduct: (name: string, price: number, description: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => Promise<void>;
+  deleteIngredient: (id: number) => Promise<void>;
+  deleteProduct: (id: number) => Promise<void>;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -107,32 +109,74 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
  const addProduct = async (nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => {
-    // 1. Insert the product
+    const precoFloat = parseFloat(preco as any);
+
     const { data: newProduct, error: productError } = await supabase
       .from('produtos')
-      .insert([{ nome, preco, descricao, imagem_url: `https://picsum.photos/seed/${nome}/400/300` }])
+      .insert([{ nome, preco: precoFloat, descricao, imagem_url: `https://picsum.photos/seed/${nome}/400/300` }])
       .select()
       .single();
 
-    if (productError || !newProduct) {
+    if (productError) {
       console.error('Error adding product:', productError);
-      toast.error('Falha ao adicionar produto.');
+      alert('Erro ao salvar produto: ' + productError.message);
       return;
     }
 
-    // 2. Insert the recipe items
-    const itemsToInsert = recipeItems.map(item => ({ ...item, produto_id: newProduct.id }));
+    if (!newProduct) {
+        console.error('Error adding product: No data returned');
+        alert('Erro ao salvar produto: Nenhum dado retornado.');
+        return;
+    }
+
+    const itemsToInsert = recipeItems.map(item => ({ 
+      produto_id: newProduct.id, 
+      ingrediente_id: item.ingrediente_id, 
+      quantidade_gasta: item.quantidade_gasta 
+    }));
+
     const { error: recipeError } = await supabase.from('ficha_tecnica').insert(itemsToInsert);
 
     if (recipeError) {
       console.error('Error adding recipe items:', recipeError);
-      toast.error('Falha ao adicionar a ficha técnica.');
-      // Potentially delete the product here to avoid orphaned products
+      alert('Erro ao salvar ficha técnica: ' + recipeError.message);
       return;
     }
 
-    toast.success('Produto e ficha técnica adicionados!');
+    toast.success('Produto e ficha técnica adicionados com sucesso!');
     fetchProducts();
+  };
+
+  const deleteIngredient = async (id: number) => {
+    try {
+      const { error } = await supabase.from('ingredientes').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Ingrediente excluído com sucesso!');
+      fetchIngredients();
+    } catch (error: any) {
+      console.error('Error deleting ingredient:', error);
+      if (error.code === '23503') { // Foreign key violation
+        toast.error('Erro: Este ingrediente não pode ser excluído pois está vinculado a uma Ficha Técnica.');
+      } else {
+        toast.error('Falha ao excluir ingrediente.');
+      }
+    }
+  };
+
+  const deleteProduct = async (id: number) => {
+    try {
+      const { error } = await supabase.from('produtos').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Produto excluído com sucesso!');
+      fetchProducts();
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      if (error.code === '23503') { // Foreign key violation
+        toast.error('Erro: Este produto não pode ser excluído pois está vinculado a um Pedido existente.');
+      } else {
+        toast.error('Falha ao excluir produto.');
+      }
+    }
   };
 
   const addOrder = async (orderData: Omit<Order, 'id' | 'criado_em' | 'items'>, itemsData: Omit<OrderItem, 'id' | 'pedido_id'>[]) => {
@@ -153,7 +197,7 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   return (
-    <StockContext.Provider value={{ ingredients, products, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient, addProduct }}>
+    <StockContext.Provider value={{ ingredients, products, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient, addProduct, deleteIngredient, deleteProduct }}>
       {children}
     </StockContext.Provider>
   );

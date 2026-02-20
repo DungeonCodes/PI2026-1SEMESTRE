@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import AddIngredientModal from '../components/AddIngredientModal';
 
 const Inventory: React.FC = () => {
-  const { ingredients, restockIngredient } = useStock();
+  const { ingredients, restockIngredient, deleteIngredient } = useStock();
   const [restockAmounts, setRestockAmounts] = useState<{[key: number]: string}>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -22,6 +22,12 @@ const Inventory: React.FC = () => {
   const handleAmountChange = (ingredientId: number, value: string) => {
     setRestockAmounts(prev => ({...prev, [ingredientId]: value}));
   }
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Tem certeza que deseja excluir este ingrediente?')) {
+      await deleteIngredient(id);
+    }
+  };
 
   return (
     <div className="p-4">
@@ -44,7 +50,7 @@ const Inventory: React.FC = () => {
             <h3 className="text-xl font-bold">{ingredient.nome}</h3>
             <p className="text-gray-400">Quantidade: {ingredient.quantidade_atual} {ingredient.unidade_medida}</p>
             <p className="text-gray-500">Mínimo: {ingredient.quantidade_minima}</p>
-            <div className="mt-4 flex items-center">
+            <div className="mt-4 flex items-center justify-between">
               <input 
                 type="number"
                 value={restockAmounts[ingredient.id] || ''}
@@ -57,6 +63,18 @@ const Inventory: React.FC = () => {
                 className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-1 px-3 rounded"
               >
                 + Repor
+              </button>
+              <button 
+                onClick={() => handleDelete(ingredient.id)}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded ml-2"
+              >
+                Excluir
+              </button>
+              <button 
+                onClick={() => handleDelete(ingredient.id)}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
+              >
+                Excluir
               </button>
             </div>
           </div>
