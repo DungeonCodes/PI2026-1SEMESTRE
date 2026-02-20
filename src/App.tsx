@@ -8,6 +8,7 @@ import Header from './components/Header';
 import PDV from './pages/PDV';
 import Kitchen from './pages/Kitchen';
 import Inventory from './pages/Inventory';
+import Menu from './pages/Menu';
 import { StockProvider } from './context/StockContext';
 import { Toaster } from 'react-hot-toast';
 
@@ -22,6 +23,8 @@ export default function App() {
         return <Kitchen />;
       case 'Inventário':
         return <Inventory />;
+      case 'Cardápio':
+        return <Menu />;
       default:
         return <PDV />;
     }
@@ -31,7 +34,7 @@ export default function App() {
     <StockProvider>
       <Toaster />
       <div className="bg-gray-900 text-white min-h-screen">
-        <Header activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Header activeTab={activeTab} setActiveTab={setActiveTab} tabs={['PDV', 'Cozinha', 'Inventário', 'Cardápio']} />
         <main>{renderContent()}</main>
       </div>
     </StockProvider>

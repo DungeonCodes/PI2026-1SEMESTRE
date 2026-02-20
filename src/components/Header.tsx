@@ -11,7 +11,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
-  const tabs = ['PDV', 'Cozinha', 'Inventário'];
+  const tabs = ['PDV', 'Cozinha', 'Inventário', 'Cardápio'];
 
   return (
     <header className="bg-gray-900 text-white p-4 flex justify-between items-center">

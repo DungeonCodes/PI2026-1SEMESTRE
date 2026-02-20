@@ -11,6 +11,7 @@ interface StockContextType {
   updateOrderStatus: (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => Promise<void>;
   restockIngredient: (ingredientId: number, amount: number) => Promise<void>;
   addIngredient: (name: string, quantity: number, minQuantity: number, unit: string) => Promise<void>;
+  addProduct: (name: string, price: number, description: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => Promise<void>;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -105,7 +106,36 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   };
 
- const addOrder = async (orderData: Omit<Order, 'id' | 'criado_em' | 'items'>, itemsData: Omit<OrderItem, 'id' | 'pedido_id'>[]) => {
+ const addProduct = async (nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => {
+    // 1. Insert the product
+    const { data: newProduct, error: productError } = await supabase
+      .from('produtos')
+      .insert([{ nome, preco, descricao, imagem_url: `https://picsum.photos/seed/${nome}/400/300` }])
+      .select()
+      .single();
+
+    if (productError || !newProduct) {
+      console.error('Error adding product:', productError);
+      toast.error('Falha ao adicionar produto.');
+      return;
+    }
+
+    // 2. Insert the recipe items
+    const itemsToInsert = recipeItems.map(item => ({ ...item, produto_id: newProduct.id }));
+    const { error: recipeError } = await supabase.from('ficha_tecnica').insert(itemsToInsert);
+
+    if (recipeError) {
+      console.error('Error adding recipe items:', recipeError);
+      toast.error('Falha ao adicionar a ficha técnica.');
+      // Potentially delete the product here to avoid orphaned products
+      return;
+    }
+
+    toast.success('Produto e ficha técnica adicionados!');
+    fetchProducts();
+  };
+
+  const addOrder = async (orderData: Omit<Order, 'id' | 'criado_em' | 'items'>, itemsData: Omit<OrderItem, 'id' | 'pedido_id'>[]) => {
     const { data, error } = await supabase.rpc('process_order', {
       p_cliente_nome: orderData.cliente_nome,
       p_total: orderData.total,
@@ -123,7 +153,7 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   return (
-    <StockContext.Provider value={{ ingredients, products, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient }}>
+    <StockContext.Provider value={{ ingredients, products, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient, addProduct }}>
       {children}
     </StockContext.Provider>
   );
