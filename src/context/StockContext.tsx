@@ -11,7 +11,9 @@ interface StockContextType {
   updateOrderStatus: (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => Promise<void>;
   restockIngredient: (ingredientId: number, amount: number) => Promise<void>;
   addIngredient: (name: string, quantity: number, minQuantity: number, unit: string) => Promise<void>;
+  updateIngredient: (id: number, name: string, minQuantity: number, unit: string) => Promise<void>;
   addProduct: (name: string, price: number, description: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => Promise<void>;
+  updateProduct: (id: number, name: string, price: number, description: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => Promise<void>;
   deleteIngredient: (id: number) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
 }
@@ -65,6 +67,23 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     else {
         toast.success('Ingrediente adicionado!');
         fetchIngredients();
+    }
+  };
+
+  const updateIngredient = async (id: number, nome: string, quantidade_minima: number, unidade_medida: string) => {
+    try {
+      const { error } = await supabase
+        .from('ingredientes')
+        .update({ nome, quantidade_minima, unidade_medida })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Ingrediente atualizado com sucesso!');
+      fetchIngredients();
+    } catch (error: any) {
+      console.error('Error updating ingredient:', error);
+      toast.error('Falha ao atualizar ingrediente: ' + error.message);
     }
   };
 
@@ -147,6 +166,47 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     fetchProducts();
   };
 
+  const updateProduct = async (id: number, nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[]) => {
+    try {
+      const precoFloat = parseFloat(preco as any);
+
+      // 1. Update basic product info
+      const { error: productError } = await supabase
+        .from('produtos')
+        .update({ nome, preco: precoFloat, descricao })
+        .eq('id', id);
+
+      if (productError) throw productError;
+
+      // 2. Clear old recipe items
+      const { error: deleteError } = await supabase
+        .from('ficha_tecnica')
+        .delete()
+        .eq('produto_id', id);
+
+      if (deleteError) throw deleteError;
+
+      // 3. Insert new recipe items
+      const itemsToInsert = recipeItems.map(item => ({ 
+        produto_id: id, 
+        ingrediente_id: item.ingrediente_id, 
+        quantidade_gasta: item.quantidade_gasta 
+      }));
+
+      const { error: insertError } = await supabase
+        .from('ficha_tecnica')
+        .insert(itemsToInsert);
+
+      if (insertError) throw insertError;
+
+      toast.success('Produto e ficha técnica atualizados com sucesso!');
+      fetchProducts();
+    } catch (error: any) {
+      console.error('Error updating product:', error);
+      alert('Erro ao atualizar produto: ' + error.message);
+    }
+  };
+
   const deleteIngredient = async (id: number) => {
     try {
       const { error } = await supabase.from('ingredientes').delete().eq('id', id);
@@ -197,7 +257,7 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   return (
-    <StockContext.Provider value={{ ingredients, products, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient, addProduct, deleteIngredient, deleteProduct }}>
+    <StockContext.Provider value={{ ingredients, products, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient, updateIngredient, addProduct, updateProduct, deleteIngredient, deleteProduct }}>
       {children}
     </StockContext.Provider>
   );

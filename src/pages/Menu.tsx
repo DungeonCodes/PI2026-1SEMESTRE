@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useStock } from '../context/StockContext';
+import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { RecipeItem } from '../types';
 
 const Menu: React.FC = () => {
-  const { addProduct, ingredients, products, deleteProduct } = useStock();
+  const { addProduct, updateProduct, ingredients, products, deleteProduct } = useStock();
   const [nome, setNome] = useState('');
   const [preco, setPreco] = useState('');
   const [descricao, setDescricao] = useState('');
   const [recipeItems, setRecipeItems] = useState<Omit<RecipeItem, 'produto_id'>[]>([]);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
 
   const handleAddIngredient = () => {
     setRecipeItems([...recipeItems, { ingrediente_id: 0, quantidade_gasta: 0 }]);
@@ -26,6 +28,34 @@ const Menu: React.FC = () => {
     setRecipeItems(newItems);
   };
 
+  const handleEdit = async (product: any) => {
+    setEditingProductId(product.id);
+    setNome(product.nome);
+    setPreco(product.preco.toString());
+    setDescricao(product.descricao);
+
+    // Fetch recipe items for this product
+    const { data, error } = await supabase
+      .from('ficha_tecnica')
+      .select('ingrediente_id, quantidade_gasta')
+      .eq('produto_id', product.id);
+
+    if (error) {
+      console.error('Error fetching recipe:', error);
+      toast.error('Erro ao carregar ficha técnica.');
+    } else {
+      setRecipeItems(data || []);
+    }
+  };
+
+  const resetForm = () => {
+    setEditingProductId(null);
+    setNome('');
+    setPreco('');
+    setDescricao('');
+    setRecipeItems([]);
+  };
+
   const handleDelete = async (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este produto?')) {
       await deleteProduct(id);
@@ -35,11 +65,12 @@ const Menu: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (nome && preco && descricao && recipeItems.length > 0) {
-      await addProduct(nome, parseFloat(preco), descricao, recipeItems);
-      setNome('');
-      setPreco('');
-      setDescricao('');
-      setRecipeItems([]);
+      if (editingProductId) {
+        await updateProduct(editingProductId, nome, parseFloat(preco), descricao, recipeItems);
+      } else {
+        await addProduct(nome, parseFloat(preco), descricao, recipeItems);
+      }
+      resetForm();
     } else {
       toast.error('Por favor, preencha todos os campos e adicione ao menos um ingrediente.');
     }
@@ -50,7 +81,20 @@ const Menu: React.FC = () => {
       <h2 className="text-2xl font-bold text-orange-500 mb-4">Gerenciar Cardápio</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <form onSubmit={handleSubmit} className="bg-gray-800 p-6 rounded-lg shadow-md">
-          <h3 className="text-xl font-bold text-orange-500 mb-4">Adicionar Novo Lanche</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold text-orange-500">
+              {editingProductId ? 'Editar Lanche' : 'Adicionar Novo Lanche'}
+            </h3>
+            {editingProductId && (
+              <button 
+                type="button" 
+                onClick={resetForm}
+                className="text-sm text-gray-400 hover:text-white underline"
+              >
+                Cancelar Edição
+              </button>
+            )}
+          </div>
           <div className="mb-4">
             <label className="block text-gray-400 mb-2">Nome do Lanche</label>
             <input 
@@ -115,7 +159,7 @@ const Menu: React.FC = () => {
           </div>
 
           <button type="submit" className="mt-6 bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded w-full">
-            Salvar Produto
+            {editingProductId ? 'Atualizar Produto' : 'Salvar Produto'}
           </button>
         </form>
         <div>
@@ -127,12 +171,20 @@ const Menu: React.FC = () => {
                   <h4 className="font-bold">{product.nome}</h4>
                   <p className="text-sm text-gray-400">R$ {product.preco.toFixed(2)}</p>
                 </div>
-                <button 
-                  onClick={() => handleDelete(product.id)}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
-                >
-                  Excluir
-                </button>
+                <div className="flex space-x-2">
+                  <button 
+                    onClick={() => handleEdit(product)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded"
+                  >
+                    Editar
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(product.id)}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
+                  >
+                    Excluir
+                  </button>
+                </div>
               </div>
             ))}
           </div>
