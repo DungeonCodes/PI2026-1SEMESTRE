@@ -5,30 +5,40 @@
 
 export interface Ingredient {
   id: number;
-  name: string;
-  quantity: number;
-  minQuantity: number;
+  nome: string;
+  quantidade_atual: number;
+  quantidade_minima: number;
+  unidade_medida: string;
 }
 
-export interface MenuItem {
+export interface Product {
   id: number;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  ingredients: { ingredientId: number; quantity: number }[];
+  nome: string;
+  descricao: string;
+  preco: number;
+  imagem_url: string;
 }
 
-export interface OrderItem {
-  menuItemId: number;
-  name: string;
-  quantity: number;
-  price: number;
+export interface RecipeItem {
+  produto_id: number;
+  ingrediente_id: number;
+  quantidade_gasta: number;
 }
 
 export interface Order {
   id: number;
-  items: OrderItem[];
+  cliente_nome: string;
   status: 'Pendente' | 'Pronto' | 'Entregue';
-  createdAt: Date;
+  total: number;
+  criado_em: string;
+  items: OrderItem[]; // In Supabase response, this will be `itens_pedido`
+}
+
+export interface OrderItem {
+  id: number;
+  pedido_id: number;
+  produto_id: number;
+  quantidade: number;
+  preco_unitario: number;
+  name?: string; // For UI convenience
 }

@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState } from 'react';
 import { useStock } from '../context/StockContext';
 import toast from 'react-hot-toast';
@@ -13,10 +8,10 @@ const Inventory: React.FC = () => {
   const [restockAmounts, setRestockAmounts] = useState<{[key: number]: string}>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleRestock = (ingredientId: number) => {
+  const handleRestock = async (ingredientId: number) => {
     const amount = parseInt(restockAmounts[ingredientId] || '0', 10);
     if (amount > 0) {
-      restockIngredient(ingredientId, amount);
+      await restockIngredient(ingredientId, amount);
       toast.success('Estoque atualizado com sucesso!');
       setRestockAmounts(prev => ({...prev, [ingredientId]: ''}));
     } else {
@@ -44,11 +39,11 @@ const Inventory: React.FC = () => {
           <div
             key={ingredient.id}
             className={`p-4 rounded-lg shadow-md ${
-              ingredient.quantity < ingredient.minQuantity ? 'bg-red-900' : 'bg-gray-800'
+              ingredient.quantidade_atual < ingredient.quantidade_minima ? 'bg-red-900' : 'bg-gray-800'
             }`}>
-            <h3 className="text-xl font-bold">{ingredient.name}</h3>
-            <p className="text-gray-400">Quantidade: {ingredient.quantity}</p>
-            <p className="text-gray-500">Mínimo: {ingredient.minQuantity}</p>
+            <h3 className="text-xl font-bold">{ingredient.nome}</h3>
+            <p className="text-gray-400">Quantidade: {ingredient.quantidade_atual} {ingredient.unidade_medida}</p>
+            <p className="text-gray-500">Mínimo: {ingredient.quantidade_minima}</p>
             <div className="mt-4 flex items-center">
               <input 
                 type="number"

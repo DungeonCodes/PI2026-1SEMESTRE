@@ -1,136 +1,132 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { createContext, useState, useContext, ReactNode } from 'react';
-import { Ingredient, MenuItem, Order } from '../types';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { Ingredient, Product, Order, OrderItem } from '../types';
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 interface StockContextType {
   ingredients: Ingredient[];
-  menuItems: MenuItem[];
+  products: Product[];
   orders: Order[];
-  addOrder: (order: Omit<Order, 'id' | 'status' | 'createdAt'>) => void;
-  updateOrderStatus: (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => void;
-  restockIngredient: (ingredientId: number, amount: number) => void;
-  addIngredient: (name: string, quantity: number, minQuantity: number) => void;
+  addOrder: (order: Omit<Order, 'id' | 'criado_em' | 'items'>, items: Omit<OrderItem, 'id' | 'pedido_id'>[]) => Promise<void>;
+  updateOrderStatus: (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => Promise<void>;
+  restockIngredient: (ingredientId: number, amount: number) => Promise<void>;
+  addIngredient: (name: string, quantity: number, minQuantity: number, unit: string) => Promise<void>;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
 
 export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [ingredients, setIngredients] = useState<Ingredient[]>([
-    { id: 1, name: 'Pão', quantity: 100, minQuantity: 20 },
-    { id: 2, name: 'Blend 180g', quantity: 50, minQuantity: 10 },
-    { id: 3, name: 'Queijo Prato', quantity: 200, minQuantity: 40 },
-    { id: 4, name: 'Bacon', quantity: 150, minQuantity: 30 },
-    { id: 5, name: 'Alface', quantity: 1, minQuantity: 1 },
-    { id: 6, name: 'Tomate', quantity: 1, minQuantity: 1 },
-  ]);
-
-  const [menuItems] = useState<MenuItem[]>([
-    {
-      id: 1,
-      name: 'X-Salada',
-      description: 'O clássico com um toque da casa.',
-      price: 25.0,
-      image: 'https://picsum.photos/seed/x-salada/400/300',
-      ingredients: [
-        { ingredientId: 1, quantity: 1 },
-        { ingredientId: 2, quantity: 1 },
-        { ingredientId: 3, quantity: 2 },
-        { ingredientId: 5, quantity: 1 },
-        { ingredientId: 6, quantity: 1 },
-      ],
-    },
-    {
-      id: 2,
-      name: 'X-Bacon',
-      description: 'Para os amantes de bacon.',
-      price: 28.0,
-      image: 'https://picsum.photos/seed/x-bacon/400/300',
-      ingredients: [
-        { ingredientId: 1, quantity: 1 },
-        { ingredientId: 2, quantity: 1 },
-        { ingredientId: 3, quantity: 2 },
-        { ingredientId: 4, quantity: 3 },
-      ],
-    },
-  ]);
-
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
 
-  const addOrder = (order: Omit<Order, 'id' | 'status' | 'createdAt'>) => {
-    // Verificar se há ingredientes suficientes
-    for (const item of order.items) {
-      const menuItem = menuItems.find((mi) => mi.id === item.menuItemId);
-      if (menuItem) {
-        for (const ing of menuItem.ingredients) {
-          const ingredient = ingredients.find((i) => i.id === ing.ingredientId);
-          if (!ingredient || ingredient.quantity < ing.quantity * item.quantity) {
-            alert(`Estoque insuficiente para ${menuItem.name}`);
-            return;
-          }
-        }
-      }
+  const fetchIngredients = async () => {
+    const { data, error } = await supabase.from('ingredientes').select('*').order('id');
+    if (error) {
+        console.error('Error fetching ingredients:', error);
+        toast.error('Falha ao carregar ingredientes.');
+    }
+    else setIngredients(data as Ingredient[]);
+  };
+
+  const fetchProducts = async () => {
+    const { data, error } = await supabase.from('produtos').select('*').order('id');
+    if (error) {
+        console.error('Error fetching products:', error);
+        toast.error('Falha ao carregar produtos.');
+    }
+    else setProducts(data as Product[]);
+  };
+
+  const fetchOrders = async () => {
+    const { data, error } = await supabase.from('pedidos').select('*, itens_pedido(*)').order('criado_em', { ascending: false });
+    if (error) {
+        console.error('Error fetching orders:', error);
+        toast.error('Falha ao carregar pedidos.');
+    }
+    else setOrders(data as any[]); // Use `any` to avoid deep type issues with Supabase response
+  };
+
+  useEffect(() => {
+    fetchIngredients();
+    fetchProducts();
+    fetchOrders();
+  }, []);
+
+  const addIngredient = async (nome: string, quantidade_atual: number, quantidade_minima: number, unidade_medida: string) => {
+    const { error } = await supabase.from('ingredientes').insert([{ nome, quantidade_atual, quantidade_minima, unidade_medida }]);
+    if (error) {
+        console.error('Error adding ingredient:', error);
+        toast.error('Falha ao adicionar ingrediente.');
+    }
+    else {
+        toast.success('Ingrediente adicionado!');
+        fetchIngredients();
+    }
+  };
+
+  const restockIngredient = async (ingredientId: number, amount: number) => {
+    const { data: currentIngredient, error: fetchError } = await supabase
+      .from('ingredientes')
+      .select('quantidade_atual')
+      .eq('id', ingredientId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching ingredient for restock:', fetchError);
+      toast.error('Falha ao buscar ingrediente para repor.');
+      return;
     }
 
-    setOrders((prevOrders) => [
-      ...prevOrders,
-      { ...order, id: prevOrders.length + 1, status: 'Pendente', createdAt: new Date() },
-    ]);
+    const newQuantity = currentIngredient.quantidade_atual + amount;
 
-    // Lógica de baixa de estoque
-    order.items.forEach((item) => {
-      const menuItem = menuItems.find((mi) => mi.id === item.menuItemId);
-      if (menuItem) {
-        menuItem.ingredients.forEach((ing) => {
-          setIngredients((prevIngredients) =>
-            prevIngredients.map((i) =>
-              i.id === ing.ingredientId
-                ? { ...i, quantity: i.quantity - ing.quantity * item.quantity }
-                : i
-            )
-          );
-        });
-      }
+    const { error } = await supabase
+      .from('ingredientes')
+      .update({ quantidade_atual: newQuantity })
+      .eq('id', ingredientId);
+
+    if (error) {
+        console.error('Error restock ingredient:', error);
+        toast.error('Falha ao repor estoque.');
+    }
+    else {
+        fetchIngredients();
+    }
+  };
+
+  const updateOrderStatus = async (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => {
+    const { error } = await supabase.from('pedidos').update({ status }).eq('id', orderId);
+    if (error) {
+        console.error('Error updating order status:', error);
+        toast.error('Falha ao atualizar status do pedido.');
+    }
+    else {
+        fetchOrders();
+    }
+  };
+
+ const addOrder = async (orderData: Omit<Order, 'id' | 'criado_em' | 'items'>, itemsData: Omit<OrderItem, 'id' | 'pedido_id'>[]) => {
+    const { data, error } = await supabase.rpc('process_order', {
+      p_cliente_nome: orderData.cliente_nome,
+      p_total: orderData.total,
+      p_items: itemsData.map(item => ({ produto_id: item.produto_id, quantidade: item.quantidade, preco_unitario: item.preco_unitario }))
     });
-  };
 
-  const updateOrderStatus = (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status } : order
-      )
-    );
-  };
-
-  const restockIngredient = (ingredientId: number, amount: number) => {
-    setIngredients((prevIngredients) =>
-      prevIngredients.map((i) =>
-        i.id === ingredientId ? { ...i, quantity: i.quantity + amount } : i
-      )
-    );
-  };
-
-  const addIngredient = (name: string, quantity: number, minQuantity: number) => {
-    setIngredients((prevIngredients) => [
-      ...prevIngredients,
-      {
-        id: prevIngredients.length > 0 ? Math.max(...prevIngredients.map(i => i.id)) + 1 : 1,
-        name,
-        quantity,
-        minQuantity,
-      },
-    ]);
+    if (error) {
+      console.error('Error processing order:', error);
+      toast.error(`Falha ao processar pedido: ${error.message}`);
+    } else {
+      console.log('Order processed successfully:', data);
+      fetchOrders();
+      fetchIngredients();
+    }
   };
 
   return (
-    <StockContext.Provider value={{ ingredients, menuItems, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient }}>
+    <StockContext.Provider value={{ ingredients, products, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient }}>
       {children}
     </StockContext.Provider>
   );
-
 };
 
 export const useStock = () => {

@@ -1,18 +1,13 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React from 'react';
 import { useStock } from '../context/StockContext';
-import { MenuItem } from '../types';
+import { Product } from '../types';
 
 const Kitchen: React.FC = () => {
-  const { orders, updateOrderStatus, menuItems } = useStock();
+  const { orders, updateOrderStatus, products } = useStock();
 
-  const getMenuItemName = (menuItemId: number) => {
-    const menuItem = menuItems.find((item: MenuItem) => item.id === menuItemId);
-    return menuItem ? menuItem.name : 'Item não encontrado';
+  const getProductName = (productId: number) => {
+    const product = products.find((p: Product) => p.id === productId);
+    return product ? product.nome : 'Produto não encontrado';
   };
 
   return (
@@ -28,8 +23,8 @@ const Kitchen: React.FC = () => {
                 <h3 className="text-xl font-bold">Pedido #{order.id}</h3>
                 <ul>
                   {order.items.map((item) => (
-                    <li key={item.menuItemId}>
-                      {item.quantity}x {getMenuItemName(item.menuItemId)}
+                    <li key={item.id}>
+                      {item.quantidade}x {getProductName(item.produto_id)}
                     </li>
                   ))}
                 </ul>
@@ -50,8 +45,8 @@ const Kitchen: React.FC = () => {
                 <h3 className="text-xl font-bold">Pedido #{order.id}</h3>
                 <ul>
                   {order.items.map((item) => (
-                    <li key={item.menuItemId}>
-                      {item.quantity}x {getMenuItemName(item.menuItemId)}
+                    <li key={item.id}>
+                      {item.quantidade}x {getProductName(item.produto_id)}
                     </li>
                   ))}
                 </ul>
