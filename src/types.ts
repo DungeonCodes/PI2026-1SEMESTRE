@@ -50,3 +50,13 @@ export interface AppSettings {
   cor_destaque: string;
   imagem_fundo_url: string;
 }
+
+export interface StockMovement {
+  id: number;
+  ingrediente_id: number;
+  tipo: 'entrada' | 'saida';
+  quantidade: number;
+  descricao: string;
+  criado_em: string;
+  ingrediente_nome?: string; // For UI
+}

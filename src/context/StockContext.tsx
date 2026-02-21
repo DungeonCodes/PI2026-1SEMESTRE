@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { Ingredient, Product, Order, OrderItem, RecipeItem } from '../types';
+import { Ingredient, Product, Order, OrderItem, RecipeItem, StockMovement } from '../types';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -7,6 +7,7 @@ interface StockContextType {
   ingredients: Ingredient[];
   products: Product[];
   orders: Order[];
+  movements: StockMovement[];
   addOrder: (order: Omit<Order, 'id' | 'criado_em' | 'items'>, items: Omit<OrderItem, 'id' | 'pedido_id'>[]) => Promise<void>;
   updateOrderStatus: (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => Promise<void>;
   restockIngredient: (ingredientId: number, amount: number) => Promise<void>;
@@ -16,6 +17,7 @@ interface StockContextType {
   updateProduct: (id: number, nome: string, preco: number, descricao: string, recipeItems: Omit<RecipeItem, 'produto_id'>[], imagem_url?: string) => Promise<void>;
   deleteIngredient: (id: number) => Promise<void>;
   deleteProduct: (id: number) => Promise<void>;
+  fetchMovements: () => Promise<void>;
 }
 
 const StockContext = createContext<StockContextType | undefined>(undefined);
@@ -24,6 +26,7 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [movements, setMovements] = useState<StockMovement[]>([]);
 
   const fetchIngredients = async () => {
     const { data, error } = await supabase.from('ingredientes').select('*').order('id');
@@ -52,10 +55,29 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     else setOrders(data as any[]); // Use `any` to avoid deep type issues with Supabase response
   };
 
+  const fetchMovements = async () => {
+    const { data, error } = await supabase
+      .from('movimentacoes_estoque')
+      .select('*, ingredientes(nome)')
+      .order('criado_em', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error('Error fetching movements:', error);
+    } else {
+      const formatted = data.map((m: any) => ({
+        ...m,
+        ingrediente_nome: m.ingredientes?.nome
+      }));
+      setMovements(formatted);
+    }
+  };
+
   useEffect(() => {
     fetchIngredients();
     fetchProducts();
     fetchOrders();
+    fetchMovements();
   }, []);
 
   const addIngredient = async (nome: string, quantidade_atual: number, quantidade_minima: number, unidade_medida: string) => {
@@ -112,7 +134,16 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         toast.error('Falha ao repor estoque.');
     }
     else {
+        // Log movement
+        await supabase.from('movimentacoes_estoque').insert([{
+          ingrediente_id: ingredientId,
+          tipo: 'entrada',
+          quantidade: amount,
+          descricao: 'Reposição de Estoque'
+        }]);
+        
         fetchIngredients();
+        fetchMovements();
     }
   };
 
@@ -259,13 +290,39 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       toast.error(`Falha ao processar pedido: ${error.message}`);
     } else {
       console.log('Order processed successfully:', data);
+      
+      // Log stock movements for each product in the order
+      try {
+        for (const item of itemsData) {
+          // Get recipe for this product
+          const { data: recipe } = await supabase
+            .from('ficha_tecnica')
+            .select('ingrediente_id, quantidade_gasta')
+            .eq('produto_id', item.produto_id);
+          
+          if (recipe) {
+            const movementsToInsert = recipe.map(r => ({
+              ingrediente_id: r.ingrediente_id,
+              tipo: 'saida',
+              quantidade: r.quantidade_gasta * item.quantidade,
+              descricao: 'Venda de Lanche'
+            }));
+            
+            await supabase.from('movimentacoes_estoque').insert(movementsToInsert);
+          }
+        }
+      } catch (err) {
+        console.error('Error logging stock movements:', err);
+      }
+
       fetchOrders();
       fetchIngredients();
+      fetchMovements();
     }
   };
 
   return (
-    <StockContext.Provider value={{ ingredients, products, orders, addOrder, updateOrderStatus, restockIngredient, addIngredient, updateIngredient, addProduct, updateProduct, deleteIngredient, deleteProduct }}>
+    <StockContext.Provider value={{ ingredients, products, orders, movements, addOrder, updateOrderStatus, restockIngredient, addIngredient, updateIngredient, addProduct, updateProduct, deleteIngredient, deleteProduct, fetchMovements }}>
       {children}
     </StockContext.Provider>
   );
