@@ -12,11 +12,27 @@ import Menu from './pages/Menu';
 import Management from './pages/Management';
 import { StockProvider } from './context/StockContext';
 import { ConfigProvider, useConfig } from './context/ConfigContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
+import { useEffect } from 'react';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('PDV');
   const { settings } = useConfig();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
+        // The AuthProvider will automatically pick up the new session
+        // via onAuthStateChange, but we can force a refresh if needed.
+        console.log('Auth success message received');
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -59,11 +75,13 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ConfigProvider>
-      <StockProvider>
-        <Toaster />
-        <AppContent />
-      </StockProvider>
-    </ConfigProvider>
+    <AuthProvider>
+      <ConfigProvider>
+        <StockProvider>
+          <Toaster />
+          <AppContent />
+        </StockProvider>
+      </ConfigProvider>
+    </AuthProvider>
   );
 }
