@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStock } from '../context/StockContext';
+import { useConfig } from '../context/ConfigContext';
 import toast from 'react-hot-toast';
 import AddIngredientModal from '../components/AddIngredientModal';
 import EditIngredientModal from '../components/EditIngredientModal';
@@ -7,6 +8,7 @@ import { Ingredient } from '../types';
 
 const Inventory: React.FC = () => {
   const { ingredients, restockIngredient, deleteIngredient } = useStock();
+  const { settings } = useConfig();
   const [restockAmounts, setRestockAmounts] = useState<{[key: number]: string}>({});
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -39,29 +41,37 @@ const Inventory: React.FC = () => {
   };
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold text-orange-500">Inventário</h2>
+    <div className="p-4 max-w-7xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h2 
+          className="text-2xl font-bold transition-colors duration-300"
+          style={{ color: settings?.cor_destaque || '#f97316' }}
+        >
+          Inventário
+        </h2>
         <button 
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded"
+          className="text-white font-bold py-2 px-4 rounded-lg transition-all duration-200 hover:scale-[1.02]"
+          style={{ backgroundColor: settings?.cor_destaque || '#f97316' }}
         >
           + Novo Ingrediente
         </button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {ingredients.map((ingredient) => (
           <div
             key={ingredient.id}
-            className={`p-4 rounded-lg shadow-md ${
-              ingredient.quantidade_atual < ingredient.quantidade_minima ? 'bg-red-900' : 'bg-gray-800'
+            className={`p-6 rounded-xl shadow-lg border transition-all duration-300 ${
+              ingredient.quantidade_atual < ingredient.quantidade_minima 
+                ? 'bg-red-900/40 border-red-500/30' 
+                : 'bg-gray-800/80 border-white/5 backdrop-blur-sm'
             }`}>
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start mb-4">
               <h3 className="text-xl font-bold">{ingredient.nome}</h3>
-              <div className="flex space-x-2">
+              <div className="flex space-x-3">
                 <button 
                   onClick={() => handleEdit(ingredient)}
-                  className="text-blue-400 hover:text-blue-300"
+                  className="text-blue-400 hover:text-blue-300 transition-colors"
                   title="Editar"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -70,7 +80,7 @@ const Inventory: React.FC = () => {
                 </button>
                 <button 
                   onClick={() => handleDelete(ingredient.id)}
-                  className="text-red-400 hover:text-red-300"
+                  className="text-red-400 hover:text-red-300 transition-colors"
                   title="Excluir"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -79,21 +89,30 @@ const Inventory: React.FC = () => {
                 </button>
               </div>
             </div>
-            <p className="text-gray-400">Quantidade: {ingredient.quantidade_atual} {ingredient.unidade_medida}</p>
-            <p className="text-gray-500">Mínimo: {ingredient.quantidade_minima}</p>
-            <div className="mt-4 flex items-center">
+            <div className="space-y-1 mb-6">
+              <p className="text-gray-400 flex justify-between">
+                <span>Estoque:</span>
+                <span className="font-bold text-white">{ingredient.quantidade_atual} {ingredient.unidade_medida}</span>
+              </p>
+              <p className="text-gray-500 text-sm flex justify-between">
+                <span>Mínimo:</span>
+                <span>{ingredient.quantidade_minima} {ingredient.unidade_medida}</span>
+              </p>
+            </div>
+            <div className="mt-4 flex items-center space-x-2">
               <input 
                 type="number"
                 value={restockAmounts[ingredient.id] || ''}
                 onChange={(e) => handleAmountChange(ingredient.id, e.target.value)}
-                className="w-24 bg-gray-700 text-white p-1 rounded-md mr-2"
+                className="flex-grow bg-gray-700/50 text-white p-2 rounded-lg border border-white/10 outline-none focus:border-orange-500 transition-colors"
                 placeholder="Qtd"
               />
               <button 
                 onClick={() => handleRestock(ingredient.id)}
-                className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-1 px-3 rounded"
+                className="text-white font-bold py-2 px-4 rounded-lg transition-all duration-200"
+                style={{ backgroundColor: settings?.cor_destaque || '#f97316' }}
               >
-                + Repor
+                Repor
               </button>
             </div>
           </div>

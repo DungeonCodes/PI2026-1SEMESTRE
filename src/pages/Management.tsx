@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { AppSettings } from '../types';
+import { useConfig } from '../context/ConfigContext';
 
 const Management: React.FC = () => {
+  const { fetchSettings: refreshGlobalSettings } = useConfig();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [nome, setNome] = useState('');
   const [corTexto, setCorTexto] = useState('#ffffff');
@@ -103,6 +105,7 @@ const Management: React.FC = () => {
 
       toast.success('Configurações salvas com sucesso!');
       fetchSettings();
+      refreshGlobalSettings();
       setImageFile(null);
     } catch (error: any) {
       console.error('Error saving settings:', error);
@@ -118,16 +121,21 @@ const Management: React.FC = () => {
 
   return (
     <div className="p-4 max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-orange-500 mb-6">Gestão do Sistema</h2>
+      <h2 
+        className="text-2xl font-bold mb-6 transition-colors duration-300"
+        style={{ color: settings?.cor_destaque || '#f97316' }}
+      >
+        Gestão do Sistema
+      </h2>
       
-      <form onSubmit={handleSave} className="bg-gray-800 p-6 rounded-lg shadow-md space-y-6">
+      <form onSubmit={handleSave} className="bg-gray-800/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-white/5 space-y-6">
         <div>
           <label className="block text-gray-400 mb-2">Nome da Hamburgueria</label>
           <input 
             type="text"
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            className="w-full bg-gray-700 text-white p-2 rounded-md border border-gray-600 focus:border-orange-500 outline-none"
+            className="w-full bg-gray-700/50 text-white p-2 rounded-lg border border-white/10 outline-none focus:border-orange-500 transition-colors"
             placeholder="Ex: Burger King"
             required
           />
@@ -141,7 +149,7 @@ const Management: React.FC = () => {
                 type="color"
                 value={corTexto}
                 onChange={(e) => setCorTexto(e.target.value)}
-                className="h-10 w-20 bg-gray-700 rounded cursor-pointer"
+                className="h-10 w-20 bg-gray-700 rounded cursor-pointer border-none"
               />
               <span className="text-sm font-mono text-gray-300 uppercase">{corTexto}</span>
             </div>
@@ -154,7 +162,7 @@ const Management: React.FC = () => {
                 type="color"
                 value={corDestaque}
                 onChange={(e) => setCorDestaque(e.target.value)}
-                className="h-10 w-20 bg-gray-700 rounded cursor-pointer"
+                className="h-10 w-20 bg-gray-700 rounded cursor-pointer border-none"
               />
               <span className="text-sm font-mono text-gray-300 uppercase">{corDestaque}</span>
             </div>
@@ -167,15 +175,15 @@ const Management: React.FC = () => {
             type="file"
             accept="image/*"
             onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-            className="w-full text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-700 cursor-pointer"
+            className="w-full text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-white hover:file:bg-gray-600 cursor-pointer"
           />
           {settings?.imagem_fundo_url && !imageFile && (
-            <div className="mt-2">
-              <p className="text-xs text-gray-500 mb-1">Imagem atual:</p>
+            <div className="mt-4">
+              <p className="text-xs text-gray-500 mb-2">Imagem atual:</p>
               <img 
                 src={settings.imagem_fundo_url} 
                 alt="Background preview" 
-                className="h-20 w-auto rounded border border-gray-600 object-cover"
+                className="h-24 w-auto rounded-lg border border-white/10 object-cover shadow-md"
                 referrerPolicy="no-referrer"
               />
             </div>
@@ -185,7 +193,8 @@ const Management: React.FC = () => {
         <button 
           type="submit" 
           disabled={saving}
-          className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 text-white font-bold py-3 px-4 rounded transition-colors"
+          className="w-full text-white font-bold py-3 px-4 rounded-lg transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:bg-gray-700 disabled:text-gray-500"
+          style={{ backgroundColor: settings?.cor_destaque || '#f97316' }}
         >
           {saving ? 'Salvando Configurações...' : 'Salvar Configurações'}
         </button>
