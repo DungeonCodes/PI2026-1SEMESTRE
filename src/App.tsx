@@ -19,20 +19,19 @@ import { useEffect } from 'react';
 function AppContent() {
   const [activeTab, setActiveTab] = useState('PDV');
   const { settings } = useConfig();
-  const { user } = useAuth();
+  const { user, refreshSession } = useAuth();
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'SUPABASE_AUTH_SUCCESS') {
-        // The AuthProvider will automatically pick up the new session
-        // via onAuthStateChange, but we can force a refresh if needed.
-        console.log('Auth success message received');
+        refreshSession();
+        console.log('Auth success message received and session refreshed');
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [refreshSession]);
 
   const renderContent = () => {
     switch (activeTab) {

@@ -71,33 +71,23 @@ const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
 
         <div className="flex items-center gap-3 border-l border-white/10 pl-4">
           {user ? (
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col items-end hidden sm:flex">
-                <span className="text-xs font-medium text-white">{user.user_metadata.full_name || user.email}</span>
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-end">
+                <span className="text-sm font-medium text-white">{user.email}</span>
                 <button 
                   onClick={signOut}
-                  className="text-[10px] text-gray-400 hover:text-white underline transition-colors"
+                  className="text-xs text-gray-400 hover:text-white underline transition-colors"
                 >
                   Sair
                 </button>
               </div>
-              {user.user_metadata.avatar_url ? (
+              {user.user_metadata.avatar_url && (
                 <img 
                   src={user.user_metadata.avatar_url} 
                   alt="Avatar" 
-                  className="w-8 h-8 rounded-full border border-white/10"
+                  className="w-8 h-8 rounded-full border border-white/10 hidden sm:block"
                 />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold">
-                  {user.email?.charAt(0).toUpperCase()}
-                </div>
               )}
-              <button 
-                onClick={signOut}
-                className="sm:hidden text-xs text-gray-400 hover:text-white underline"
-              >
-                Sair
-              </button>
             </div>
           ) : (
             <button
