@@ -42,3 +42,11 @@ export interface OrderItem {
   preco_unitario: number;
   name?: string; // For UI convenience
 }
+
+export interface AppSettings {
+  id: number;
+  nome_hamburgueria: string;
+  cor_texto: string;
+  cor_destaque: string;
+  imagem_fundo_url: string;
+}
