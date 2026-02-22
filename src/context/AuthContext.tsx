@@ -28,13 +28,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       const userRole = data?.funcao || 'cliente';
       if (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('Error fetching user profile (falling back to cliente):', error);
       }
       
       setRole(userRole);
       setUser({ ...authUser, funcao: userRole });
     } catch (err) {
-      console.error('Unexpected error fetching profile:', err);
+      console.error('Unexpected error fetching profile (falling back to cliente):', err);
       setRole('cliente');
       setUser({ ...authUser, funcao: 'cliente' });
     } finally {
@@ -49,24 +49,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } else {
       setUser(null);
       setRole(null);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     // Initial check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        fetchUserProfile(session.user);
-      } else {
-        setLoading(false);
-      }
-    });
+    refreshSession();
 
     // Real-time listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        await fetchUserProfile(session.user);
-      } else {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event);
+      
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          await fetchUserProfile(session.user);
+        }
+      } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setRole(null);
         setLoading(false);
@@ -80,14 +79,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async () => {
     try {
-      // In the AI Studio preview environment, we must use a popup flow
-      // to avoid iframe redirect issues.
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // We'll use a dedicated callback page that handles postMessage
           redirectTo: `${window.location.origin}/auth-callback.html`,
-          skipBrowserRedirect: true
+          skipBrowserRedirect: true,
+          queryParams: {
+            prompt: 'select_account'
+          }
         }
       });
 
@@ -117,11 +116,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await supabase.auth.signOut();
+      setUser(null);
+      setRole(null);
+      window.location.href = '/';
     } catch (error: any) {
       console.error('Error signing out:', error);
-      throw error;
+      // Fallback cleanup
+      setUser(null);
+      setRole(null);
+      window.location.href = '/';
     }
   };
 
