@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
+import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: (User & { funcao?: string }) | null;
@@ -27,10 +28,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const refreshSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const role = await getUserRole(session.user.id);
-      setUser({ ...session.user, funcao: role });
+    const { data: { user: authUser }, error } = await supabase.auth.getUser();
+    if (authUser) {
+      const role = await getUserRole(authUser.id);
+      setUser({ ...authUser, funcao: role });
       setRole(role);
     } else {
       setUser(null);
@@ -53,9 +54,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (session?.user) {
-        const role = await getUserRole(session.user.id);
-        setUser({ ...session.user, funcao: role });
-        setRole(role);
+        // Use getUser to verify the token
+        const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+        if (verifiedUser) {
+          const role = await getUserRole(verifiedUser.id);
+          setUser({ ...verifiedUser, funcao: role });
+          setRole(role);
+        }
       } else {
         setUser(null);
         setRole(null);
@@ -69,37 +74,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signInWithGoogle = async () => {
     try {
+      // Clear any stale session data before starting new login
+      localStorage.removeItem('supabase.auth.token');
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth-callback.html`,
-          skipBrowserRedirect: true,
+          redirectTo: 'https://pi-2026-1-semestre.vercel.app/',
           queryParams: {
             prompt: 'select_account'
           }
         }
       });
 
-      if (error) throw error;
-
-      if (data?.url) {
-        const width = 600;
-        const height = 700;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-        
-        const popup = window.open(
-          data.url,
-          'google-oauth-popup',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-
-        if (!popup) {
-          alert('Por favor, habilite popups para fazer login.');
-        }
+      if (error) {
+        toast.error(`Erro no login: ${error.message}`);
+        throw error;
       }
     } catch (error: any) {
       console.error('Error signing in with Google:', error);
+      toast.error(error.message || 'Falha ao iniciar login com Google');
       throw error;
     }
   };
