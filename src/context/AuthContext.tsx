@@ -18,59 +18,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = async (authUser: User) => {
+  const getUserRole = async (userId: string) => {
     try {
-      // Não use .single() para evitar throw de erro se a linha não existir ainda
-      const { data, error } = await supabase
-        .from('perfis')
-        .select('funcao')
-        .eq('id', authUser.id);
-      
-      if (error) throw error;
-      
-      // Pega a função ou assume 'cliente' como fallback seguro
-      const userRole = (data && data.length > 0) ? data[0].funcao : 'cliente';
-      
-      console.log('Usuário logado:', { ...authUser, funcao: userRole });
-      setRole(userRole);
-      setUser({ ...authUser, funcao: userRole });
+      // Usando maybeSingle() para evitar erros se a linha não existir
+      const { data, error } = await supabase.from('perfis').select('funcao').eq('id', userId).maybeSingle();
+      if (error || !data) return 'cliente';
+      return data.funcao;
     } catch (err) {
-      console.error("Erro ao buscar cargo, forçando acesso de cliente:", err);
-      setRole('cliente');
-      setUser({ ...authUser, funcao: 'cliente' }); // Fallback crítico
-    } finally {
-      setLoading(false);
+      return 'cliente';
     }
   };
 
   const refreshSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
-      await fetchUserProfile(session.user);
+      const role = await getUserRole(session.user.id);
+      setUser({ ...session.user, funcao: role });
+      setRole(role);
     } else {
       setUser(null);
       setRole(null);
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
-    // Initial check
-    refreshSession();
+    // 1. Pega a sessão inicial imediatamente da URL/Storage
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const role = await getUserRole(session.user.id);
+        setUser({ ...session.user, funcao: role });
+        setRole(role);
+      }
+      setLoading(false);
+    });
 
-    // Real-time listener
+    // 2. Escuta mudanças em tempo real
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth event:', event);
-      
-      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (session?.user) {
-          await fetchUserProfile(session.user);
+          const role = await getUserRole(session.user.id);
+          setUser({ ...session.user, funcao: role });
+          setRole(role);
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setRole(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
     return () => {
