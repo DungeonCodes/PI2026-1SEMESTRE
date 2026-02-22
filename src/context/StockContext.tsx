@@ -288,17 +288,24 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const addOrder = async (orderData: Omit<Order, 'id' | 'criado_em' | 'items'>, itemsData: Omit<OrderItem, 'id' | 'pedido_id'>[]) => {
-    const { data, error } = await supabase.rpc('process_order', {
+    const rpcParams = {
       p_cliente_nome: orderData.cliente_nome,
-      p_total: orderData.total,
-      p_items: itemsData.map(item => ({ produto_id: item.produto_id, quantidade: item.quantidade, preco_unitario: item.preco_unitario }))
-    });
+      p_items: itemsData.map(item => ({ 
+        produto_id: item.produto_id, 
+        quantidade: item.quantidade, 
+        preco_unitario: item.preco_unitario 
+      })),
+      p_total: orderData.total
+    };
+
+    const { data, error } = await supabase.rpc('process_order', rpcParams);
 
     if (error) {
-      console.error('Error processing order:', error);
-      toast.error(`Falha ao processar pedido: ${error.message}`);
+      console.error('ERRO DETALHADO RPC (process_order):', error);
+      console.error('Parâmetros enviados:', rpcParams);
+      toast.error(`Falha ao processar pedido: ${error.message || 'Função não encontrada ou erro interno'}`);
     } else {
-      console.log('Order processed successfully:', data);
+      console.log('Pedido processado com sucesso:', data);
       
       // Log stock movements for each product in the order
       try {
