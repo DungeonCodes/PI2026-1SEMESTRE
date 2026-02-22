@@ -13,9 +13,18 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
-  const tabs = ['PDV', 'Cozinha', 'Inventário', 'Cardápio', 'Gestão'];
   const { settings } = useConfig();
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, role, signInWithGoogle, signOut } = useAuth();
+
+  const getTabsForRole = () => {
+    if (!user || role === 'cliente') return ['PDV'];
+    if (role === 'admin') return ['PDV', 'Cozinha', 'Inventário', 'Cardápio', 'Gestão'];
+    if (role === 'gerente') return ['Inventário', 'Cardápio'];
+    if (role === 'cozinha') return ['Cozinha'];
+    return ['PDV'];
+  };
+
+  const tabs = getTabsForRole();
 
   return (
     <header className="bg-gray-900/80 backdrop-blur-md text-white p-4 flex flex-col md:flex-row justify-between items-center sticky top-0 z-40 border-b border-white/10 gap-4">

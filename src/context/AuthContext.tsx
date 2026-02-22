@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
+  role: string | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -14,23 +15,60 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('perfis')
+        .select('funcao')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching user role:', error);
+        setRole('cliente');
+      } else {
+        setRole(data?.funcao || 'cliente');
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching role:', err);
+      setRole('cliente');
+    }
+  };
 
   const refreshSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     setUser(session?.user ?? null);
+    if (session?.user) {
+      await fetchUserRole(session.user.id);
+    } else {
+      setRole(null);
+    }
   };
 
   useEffect(() => {
     // Initial check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchUserRole(currentUser.id).finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
     });
 
     // Real-time listener
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        await fetchUserRole(currentUser.id);
+      } else {
+        setRole(null);
+      }
       setLoading(false);
     });
 
@@ -87,7 +125,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOut, refreshSession }}>
+    <AuthContext.Provider value={{ user, role, loading, signInWithGoogle, signOut, refreshSession }}>
       {children}
     </AuthContext.Provider>
   );

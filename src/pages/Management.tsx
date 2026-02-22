@@ -4,12 +4,15 @@ import toast from 'react-hot-toast';
 import { AppSettings } from '../types';
 import { useConfig } from '../context/ConfigContext';
 import { useStock } from '../context/StockContext';
+import { useAuth } from '../context/AuthContext';
 
 const Management: React.FC = () => {
   const { fetchSettings: refreshGlobalSettings } = useConfig();
   const { orders, ingredients, movements } = useStock();
-  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'config'>('dashboard');
+  const { role: currentUserRole } = useAuth();
+  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'config' | 'team'>('dashboard');
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [nome, setNome] = useState('');
   const [corTexto, setCorTexto] = useState('#ffffff');
   const [corDestaque, setCorDestaque] = useState('#f97316');
@@ -19,7 +22,42 @@ const Management: React.FC = () => {
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+    if (currentUserRole === 'admin') {
+      fetchProfiles();
+    }
+  }, [currentUserRole]);
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('perfis')
+        .select('*')
+        .order('email');
+      
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error: any) {
+      console.error('Error fetching profiles:', error);
+      toast.error('Erro ao carregar perfis de usuários.');
+    }
+  };
+
+  const handleUpdateRole = async (userId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('perfis')
+        .update({ funcao: newRole })
+        .eq('id', userId);
+      
+      if (error) throw error;
+      
+      toast.success('Cargo atualizado com sucesso!');
+      fetchProfiles();
+    } catch (error: any) {
+      console.error('Error updating role:', error);
+      toast.error('Erro ao atualizar cargo: ' + error.message);
+    }
+  };
 
   const fetchSettings = async () => {
     setLoading(true);
@@ -152,10 +190,23 @@ const Management: React.FC = () => {
           >
             Configurações
           </button>
+          {currentUserRole === 'admin' && (
+            <button
+              onClick={() => setActiveSubTab('team')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                activeSubTab === 'team' 
+                  ? 'bg-orange-600 text-white shadow-lg' 
+                  : 'text-gray-400 hover:text-white'
+              }`}
+              style={activeSubTab === 'team' ? { backgroundColor: settings?.cor_destaque || '#f97316' } : {}}
+            >
+              Equipe
+            </button>
+          )}
         </div>
       </div>
 
-      {activeSubTab === 'dashboard' ? (
+      {activeSubTab === 'dashboard' && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -260,7 +311,9 @@ const Management: React.FC = () => {
             </div>
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeSubTab === 'config' && (
         <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
           <form onSubmit={handleSave} className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/5 space-y-8">
             <div>
@@ -335,6 +388,46 @@ const Management: React.FC = () => {
               {saving ? 'Salvando Configurações...' : 'Salvar Configurações'}
             </button>
           </form>
+        </div>
+      )}
+
+      {activeSubTab === 'team' && currentUserRole === 'admin' && (
+        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/5">
+            <h4 className="text-xl font-bold mb-6 flex items-center">
+              <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
+              Gestão de Equipe e Acessos
+            </h4>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-gray-500 text-xs uppercase tracking-wider border-b border-white/5">
+                    <th className="pb-3 font-semibold">Usuário (Email)</th>
+                    <th className="pb-3 font-semibold">Cargo Atual</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {profiles.map(profile => (
+                    <tr key={profile.id} className="text-sm">
+                      <td className="py-4 font-medium text-gray-200">{profile.email}</td>
+                      <td className="py-4">
+                        <select
+                          value={profile.funcao}
+                          onChange={(e) => handleUpdateRole(profile.id, e.target.value)}
+                          className="bg-gray-700 text-white text-xs font-bold py-2 px-4 rounded-xl border border-white/10 outline-none focus:border-orange-500 transition-all cursor-pointer hover:bg-gray-600"
+                        >
+                          <option value="cliente">Cliente</option>
+                          <option value="cozinha">Cozinha</option>
+                          <option value="gerente">Gerente</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
     </div>

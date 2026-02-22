@@ -19,7 +19,7 @@ import { useEffect } from 'react';
 function AppContent() {
   const [activeTab, setActiveTab] = useState('PDV');
   const { settings } = useConfig();
-  const { user, refreshSession } = useAuth();
+  const { user, role, refreshSession, loading } = useAuth();
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -33,7 +33,29 @@ function AppContent() {
     return () => window.removeEventListener('message', handleMessage);
   }, [refreshSession]);
 
+  // Validate active tab on role change
+  useEffect(() => {
+    if (loading) return;
+    
+    const allowedTabs: Record<string, string[]> = {
+      'admin': ['PDV', 'Cozinha', 'Inventário', 'Cardápio', 'Gestão'],
+      'gerente': ['Inventário', 'Cardápio'],
+      'cozinha': ['Cozinha'],
+      'cliente': ['PDV'],
+      'guest': ['PDV']
+    };
+
+    const currentRole = user ? (role || 'cliente') : 'guest';
+    const tabs = allowedTabs[currentRole] || allowedTabs['guest'];
+
+    if (!tabs.includes(activeTab)) {
+      setActiveTab(tabs[0]);
+    }
+  }, [role, user, loading, activeTab]);
+
   const renderContent = () => {
+    if (loading) return <div className="flex items-center justify-center h-screen text-white">Carregando...</div>;
+
     switch (activeTab) {
       case 'PDV':
         return <PDV />;
