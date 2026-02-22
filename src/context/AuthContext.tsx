@@ -44,7 +44,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth event:', event);
+      console.log('Evento de Auth:', event);
+      
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setRole(null);
+        return;
+      }
+
       if (session?.user) {
         const role = await getUserRole(session.user.id);
         setUser({ ...session.user, funcao: role });
@@ -100,12 +107,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      localStorage.clear();
       setUser(null);
       setRole(null);
       window.location.href = '/';
     } catch (error: any) {
       console.error('Error signing out:', error);
-      // Fallback cleanup
+      localStorage.clear();
       setUser(null);
       setRole(null);
       window.location.href = '/';
