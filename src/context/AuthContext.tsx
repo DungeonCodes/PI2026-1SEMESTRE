@@ -20,23 +20,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchUserProfile = async (authUser: User) => {
     try {
+      // Não use .single() para evitar throw de erro se a linha não existir ainda
       const { data, error } = await supabase
         .from('perfis')
         .select('funcao')
-        .eq('id', authUser.id)
-        .single();
+        .eq('id', authUser.id);
       
-      const userRole = data?.funcao || 'cliente';
-      if (error) {
-        console.error('Error fetching user profile (falling back to cliente):', error);
-      }
+      if (error) throw error;
       
+      // Pega a função ou assume 'cliente' como fallback seguro
+      const userRole = (data && data.length > 0) ? data[0].funcao : 'cliente';
+      
+      console.log('Usuário logado:', { ...authUser, funcao: userRole });
       setRole(userRole);
       setUser({ ...authUser, funcao: userRole });
     } catch (err) {
-      console.error('Unexpected error fetching profile (falling back to cliente):', err);
+      console.error("Erro ao buscar cargo, forçando acesso de cliente:", err);
       setRole('cliente');
-      setUser({ ...authUser, funcao: 'cliente' });
+      setUser({ ...authUser, funcao: 'cliente' }); // Fallback crítico
     } finally {
       setLoading(false);
     }
