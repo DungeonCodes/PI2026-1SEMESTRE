@@ -5,10 +5,14 @@ import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import { RecipeItem } from '../types';
 
+import { useAuth } from '../context/AuthContext';
+
 const Menu: React.FC = () => {
   const { addProduct, updateProduct, ingredients, products, deleteProduct } = useStock();
   const { settings } = useConfig();
+  const { user } = useAuth();
   const [nome, setNome] = useState('');
+  
   const [preco, setPreco] = useState('');
   const [descricao, setDescricao] = useState('');
   const [recipeItems, setRecipeItems] = useState<Omit<RecipeItem, 'produto_id'>[]>([]);

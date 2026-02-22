@@ -28,31 +28,40 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [orders, setOrders] = useState<Order[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
 
-  const fetchIngredients = async () => {
+  const fetchIngredients = async (retryCount = 0) => {
     const { data, error } = await supabase.from('ingredientes').select('*').order('id');
     if (error) {
         console.error('Error fetching ingredients:', error);
-        toast.error('Falha ao carregar ingredientes.');
+        setIngredients([]);
+        if (retryCount < 5) {
+          setTimeout(() => fetchIngredients(retryCount + 1), 2000);
+        }
     }
     else setIngredients(data as Ingredient[]);
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (retryCount = 0) => {
     const { data, error } = await supabase.from('produtos').select('*').order('id');
     if (error) {
         console.error('Error fetching products:', error);
-        toast.error('Falha ao carregar produtos.');
+        setProducts([]);
+        if (retryCount < 5) {
+          setTimeout(() => fetchProducts(retryCount + 1), 2000);
+        }
     }
     else setProducts(data as Product[]);
   };
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (retryCount = 0) => {
     const { data, error } = await supabase.from('pedidos').select('*, itens_pedido(*)').order('criado_em', { ascending: false });
     if (error) {
         console.error('Error fetching orders:', error);
-        toast.error('Falha ao carregar pedidos.');
+        setOrders([]);
+        if (retryCount < 5) {
+          setTimeout(() => fetchOrders(retryCount + 1), 2000);
+        }
     }
-    else setOrders(data as any[]); // Use `any` to avoid deep type issues with Supabase response
+    else setOrders(data as any[]);
   };
 
   const fetchMovements = async () => {

@@ -9,7 +9,8 @@ import { useAuth } from '../context/AuthContext';
 const Management: React.FC = () => {
   const { fetchSettings: refreshGlobalSettings } = useConfig();
   const { orders, ingredients, movements } = useStock();
-  const { role: currentUserRole } = useAuth();
+  const { user, role: currentUserRole } = useAuth();
+
   const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'config' | 'team'>('dashboard');
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -21,11 +22,24 @@ const Management: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchSettings();
-    if (currentUserRole === 'admin') {
-      fetchProfiles();
-    }
-  }, [currentUserRole]);
+    if (!user) return;
+
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        await fetchSettings();
+        if (currentUserRole === 'admin') {
+          await fetchProfiles();
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados da Gestão:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [currentUserRole, user]);
 
   const fetchProfiles = async () => {
     try {
@@ -60,7 +74,6 @@ const Management: React.FC = () => {
   };
 
   const fetchSettings = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('configuracoes')
@@ -79,8 +92,6 @@ const Management: React.FC = () => {
     } catch (error: any) {
       console.error('Error fetching settings:', error);
       toast.error('Erro ao carregar configurações.');
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -6,10 +6,14 @@ import AddIngredientModal from '../components/AddIngredientModal';
 import EditIngredientModal from '../components/EditIngredientModal';
 import { Ingredient } from '../types';
 
+import { useAuth } from '../context/AuthContext';
+
 const Inventory: React.FC = () => {
   const { ingredients, restockIngredient, deleteIngredient } = useStock();
   const { settings } = useConfig();
+  const { user } = useAuth();
   const [restockAmounts, setRestockAmounts] = useState<{[key: number]: string}>({});
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<Ingredient | null>(null);

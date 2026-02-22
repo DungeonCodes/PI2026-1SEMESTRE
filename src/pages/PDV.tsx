@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useStock } from '../context/StockContext';
 import { useConfig } from '../context/ConfigContext';
+import { useAuth } from '../context/AuthContext';
 import { Product, OrderItem } from '../types';
 import toast from 'react-hot-toast';
 
 const PDV: React.FC = () => {
   const { products, addOrder } = useStock();
   const { settings } = useConfig();
+  const { user } = useAuth();
   const [cart, setCart] = useState<(Omit<OrderItem, 'id' | 'pedido_id'> & { name: string })[]>([]);
 
   const addToCart = (product: Product) => {

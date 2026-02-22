@@ -5,7 +5,6 @@ import { User } from '@supabase/supabase-js';
 interface AuthContextType {
   user: (User & { funcao?: string }) | null;
   role: string | null;
-  loading: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -16,11 +15,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<(User & { funcao?: string }) | null>(null);
   const [role, setRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const getUserRole = async (userId: string) => {
     try {
-      // Usando maybeSingle() para evitar erros se a linha não existir
       const { data, error } = await supabase.from('perfis').select('funcao').eq('id', userId).maybeSingle();
       if (error || !data) return 'cliente';
       return data.funcao;
@@ -39,34 +36,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       setRole(null);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    // 1. Pega a sessão inicial imediatamente da URL/Storage
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Initial session check
+    refreshSession();
+
+    // Listen for auth changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth event:', event);
       if (session?.user) {
         const role = await getUserRole(session.user.id);
         setUser({ ...session.user, funcao: role });
         setRole(role);
-      }
-      setLoading(false);
-    });
-
-    // 2. Escuta mudanças em tempo real
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth event:', event);
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        if (session?.user) {
-          const role = await getUserRole(session.user.id);
-          setUser({ ...session.user, funcao: role });
-          setRole(role);
-        }
-      } else if (event === 'SIGNED_OUT') {
+      } else {
         setUser(null);
         setRole(null);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -127,7 +113,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, signInWithGoogle, signOut, refreshSession }}>
+    <AuthContext.Provider value={{ user, role, signInWithGoogle, signOut, refreshSession }}>
       {children}
     </AuthContext.Provider>
   );

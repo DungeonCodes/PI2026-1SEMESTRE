@@ -3,9 +3,12 @@ import { useStock } from '../context/StockContext';
 import { useConfig } from '../context/ConfigContext';
 import { Product } from '../types';
 
+import { useAuth } from '../context/AuthContext';
+
 const Kitchen: React.FC = () => {
   const { orders, updateOrderStatus, products } = useStock();
   const { settings } = useConfig();
+  const { user } = useAuth();
 
   const getProductName = (productId: number) => {
     const product = products.find((p: Product) => p.id === productId);

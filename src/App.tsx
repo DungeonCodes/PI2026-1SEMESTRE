@@ -16,10 +16,24 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import { useEffect } from 'react';
 
+function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode, allowedRoles?: string[] }) {
+  const { user, role } = useAuth();
+
+  if (!user) {
+    return <>{children}</>;
+  }
+
+  if (allowedRoles && role && !allowedRoles.includes(role)) {
+    return <div className="p-8 text-center text-white">Acesso negado.</div>;
+  }
+
+  return <>{children}</>;
+}
+
 function AppContent() {
   const [activeTab, setActiveTab] = useState('PDV');
   const { settings } = useConfig();
-  const { user, role, refreshSession, loading } = useAuth();
+  const { user, role, refreshSession } = useAuth();
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -35,8 +49,6 @@ function AppContent() {
 
   // Validate active tab on role change
   useEffect(() => {
-    if (loading) return;
-    
     const allowedTabs: Record<string, string[]> = {
       'admin': ['PDV', 'Cozinha', 'Inventário', 'Cardápio', 'Gestão'],
       'gerente': ['Inventário', 'Cardápio'],
@@ -51,25 +63,40 @@ function AppContent() {
     if (!tabs.includes(activeTab)) {
       setActiveTab(tabs[0]);
     }
-  }, [user, loading, activeTab]);
+  }, [user, activeTab]);
 
   const renderContent = () => {
-    if (loading) return <div className="flex items-center justify-center h-screen text-white">Carregando...</div>;
+    const content = (() => {
+      switch (activeTab) {
+        case 'PDV':
+          return <PDV />;
+        case 'Cozinha':
+          return <Kitchen />;
+        case 'Inventário':
+          return <Inventory />;
+        case 'Cardápio':
+          return <Menu />;
+        case 'Gestão':
+          return <Management />;
+        default:
+          return <PDV />;
+      }
+    })();
 
-    switch (activeTab) {
-      case 'PDV':
-        return <PDV />;
-      case 'Cozinha':
-        return <Kitchen />;
-      case 'Inventário':
-        return <Inventory />;
-      case 'Cardápio':
-        return <Menu />;
-      case 'Gestão':
-        return <Management />;
-      default:
-        return <PDV />;
-    }
+    // Role-based protection for tabs
+    const roleRequirements: Record<string, string[]> = {
+      'Cozinha': ['admin', 'cozinha'],
+      'Inventário': ['admin', 'gerente'],
+      'Cardápio': ['admin', 'gerente'],
+      'Gestão': ['admin']
+    };
+
+    const requiredRoles = roleRequirements[activeTab];
+    return (
+      <ProtectedRoute allowedRoles={requiredRoles}>
+        {content}
+      </ProtectedRoute>
+    );
   };
 
   const dynamicStyles = settings ? {
