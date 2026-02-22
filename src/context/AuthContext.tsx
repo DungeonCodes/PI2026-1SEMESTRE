@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: User | null;
+  user: (User & { funcao?: string }) | null;
   role: string | null;
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
@@ -14,36 +14,40 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<(User & { funcao?: string }) | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserProfile = async (authUser: User) => {
     try {
       const { data, error } = await supabase
         .from('perfis')
         .select('funcao')
-        .eq('id', userId)
+        .eq('id', authUser.id)
         .single();
       
+      const userRole = data?.funcao || 'cliente';
       if (error) {
-        console.error('Error fetching user role:', error);
-        setRole('cliente');
-      } else {
-        setRole(data?.funcao || 'cliente');
+        console.error('Error fetching user profile:', error);
       }
+      
+      setRole(userRole);
+      setUser({ ...authUser, funcao: userRole });
     } catch (err) {
-      console.error('Unexpected error fetching role:', err);
+      console.error('Unexpected error fetching profile:', err);
       setRole('cliente');
+      setUser({ ...authUser, funcao: 'cliente' });
+    } finally {
+      setLoading(false);
     }
   };
 
   const refreshSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    setUser(session?.user ?? null);
     if (session?.user) {
-      await fetchUserRole(session.user.id);
+      await fetchUserProfile(session.user);
     } else {
+      setUser(null);
       setRole(null);
     }
   };
@@ -51,10 +55,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     // Initial check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        fetchUserRole(currentUser.id).finally(() => setLoading(false));
+      if (session?.user) {
+        fetchUserProfile(session.user);
       } else {
         setLoading(false);
       }
@@ -62,14 +64,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Real-time listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchUserRole(currentUser.id);
+      if (session?.user) {
+        await fetchUserProfile(session.user);
       } else {
+        setUser(null);
         setRole(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {

@@ -17,10 +17,11 @@ const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab }) => {
   const { user, role, signInWithGoogle, signOut } = useAuth();
 
   const getTabsForRole = () => {
-    if (!user || role === 'cliente') return ['PDV'];
-    if (role === 'admin') return ['PDV', 'Cozinha', 'Inventário', 'Cardápio', 'Gestão'];
-    if (role === 'gerente') return ['Inventário', 'Cardápio'];
-    if (role === 'cozinha') return ['Cozinha'];
+    const userRole = user?.funcao || 'cliente';
+    if (!user || userRole === 'cliente') return ['PDV'];
+    if (userRole === 'admin') return ['PDV', 'Cozinha', 'Inventário', 'Cardápio', 'Gestão'];
+    if (userRole === 'gerente') return ['Inventário', 'Cardápio'];
+    if (userRole === 'cozinha') return ['Cozinha'];
     return ['PDV'];
   };
 

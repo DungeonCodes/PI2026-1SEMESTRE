@@ -45,13 +45,13 @@ function AppContent() {
       'guest': ['PDV']
     };
 
-    const currentRole = user ? (role || 'cliente') : 'guest';
+    const currentRole = user ? (user.funcao || 'cliente') : 'guest';
     const tabs = allowedTabs[currentRole] || allowedTabs['guest'];
 
     if (!tabs.includes(activeTab)) {
       setActiveTab(tabs[0]);
     }
-  }, [role, user, loading, activeTab]);
+  }, [user, loading, activeTab]);
 
   const renderContent = () => {
     if (loading) return <div className="flex items-center justify-center h-screen text-white">Carregando...</div>;
