@@ -392,7 +392,43 @@ const Management: React.FC = () => {
       )}
 
       {activeSubTab === 'team' && currentUserRole === 'admin' && (
-        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+          {/* Invite Section */}
+          <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/5">
+            <h4 className="text-xl font-bold mb-4 flex items-center">
+              <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
+              Adicionar Novo Membro da Equipe
+            </h4>
+            <p className="text-gray-400 text-sm leading-relaxed mb-6">
+              Como utilizamos o login seguro do Google, não é necessário criar senhas. 
+              Envie o link do sistema para o seu funcionário. Assim que ele fizer o primeiro login, 
+              o email dele aparecerá na tabela abaixo para você definir o cargo (Cozinha, Gerente, etc).
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4">
+              <input 
+                type="text" 
+                readOnly 
+                value={window.location.origin}
+                className="flex-1 bg-gray-900/50 text-gray-400 p-3 rounded-xl border border-white/10 outline-none font-mono text-sm"
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.origin);
+                  toast.success('Link copiado! Envie para o funcionário.');
+                }}
+                className="px-6 py-3 rounded-xl text-white font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
+                style={{ backgroundColor: settings?.cor_destaque || '#f97316' }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+                Copiar Link de Convite
+              </button>
+            </div>
+          </div>
+
+          {/* Profiles Table */}
           <div className="bg-gray-800/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl border border-white/5">
             <h4 className="text-xl font-bold mb-6 flex items-center">
               <span className="w-2 h-2 rounded-full bg-orange-500 mr-2"></span>
