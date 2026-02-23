@@ -8,7 +8,7 @@ interface StockContextType {
   products: Product[];
   orders: Order[];
   movements: StockMovement[];
-  addOrder: (order: Omit<Order, 'id' | 'criado_em' | 'items'>, items: Omit<OrderItem, 'id' | 'pedido_id'>[]) => Promise<void>;
+  addOrder: (order: Omit<Order, 'id' | 'criado_em' | 'itens_pedido'>, items: Omit<OrderItem, 'id' | 'pedido_id'>[]) => Promise<void>;
   updateOrderStatus: (orderId: number, status: 'Pendente' | 'Pronto' | 'Entregue') => Promise<void>;
   restockIngredient: (ingredientId: number, amount: number) => Promise<void>;
   addIngredient: (name: string, quantity: number, minQuantity: number, unit: string) => Promise<void>;
@@ -53,7 +53,11 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const fetchOrders = async (retryCount = 0) => {
-    const { data, error } = await supabase.from('pedidos').select('*, itens_pedido(*)').order('criado_em', { ascending: false });
+    const { data, error } = await supabase
+      .from('pedidos')
+      .select('*, itens_pedido(*, produtos(nome))')
+      .order('criado_em', { ascending: false });
+    
     if (error) {
         console.error('Error fetching orders:', error);
         setOrders([]);
@@ -61,7 +65,7 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           setTimeout(() => fetchOrders(retryCount + 1), 2000);
         }
     }
-    else setOrders(data as any[]);
+    else setOrders(data as Order[]);
   };
 
   const fetchMovements = async () => {

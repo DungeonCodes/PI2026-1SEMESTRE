@@ -6,14 +6,9 @@ import { Product } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 const Kitchen: React.FC = () => {
-  const { orders, updateOrderStatus, products } = useStock();
+  const { orders, updateOrderStatus } = useStock();
   const { settings } = useConfig();
   const { user } = useAuth();
-
-  const getProductName = (productId: number) => {
-    const product = products.find((p: Product) => p.id === productId);
-    return product ? product.nome : 'Produto não encontrado';
-  };
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
@@ -39,9 +34,9 @@ const Kitchen: React.FC = () => {
                     <span className="text-xs text-gray-400">{new Date(order.criado_em).toLocaleTimeString()}</span>
                   </div>
                   <ul className="space-y-2 mb-6">
-                    {order.items.map((item) => (
+                    {order.itens_pedido?.map((item) => (
                       <li key={item.id} className="flex justify-between border-b border-white/5 pb-1">
-                        <span className="font-medium">{getProductName(item.produto_id)}</span>
+                        <span className="font-medium">{item.produtos?.nome || 'Produto'}</span>
                         <span className="font-bold text-orange-400">x{item.quantidade}</span>
                       </li>
                     ))}
@@ -72,9 +67,9 @@ const Kitchen: React.FC = () => {
                 <div key={order.id} className="bg-green-900/40 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-green-500/20">
                   <h3 className="text-xl font-bold mb-4">Pedido #{order.id}</h3>
                   <ul className="space-y-2 mb-6">
-                    {order.items.map((item) => (
+                    {order.itens_pedido?.map((item) => (
                       <li key={item.id} className="flex justify-between border-b border-white/5 pb-1">
-                        <span>{getProductName(item.produto_id)}</span>
+                        <span>{item.produtos?.nome || 'Produto'}</span>
                         <span className="font-bold">x{item.quantidade}</span>
                       </li>
                     ))}

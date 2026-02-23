@@ -31,7 +31,7 @@ export interface Order {
   status: 'Pendente' | 'Pronto' | 'Entregue';
   total: number;
   criado_em: string;
-  items: OrderItem[]; // In Supabase response, this will be `itens_pedido`
+  itens_pedido: OrderItem[];
 }
 
 export interface OrderItem {
@@ -40,6 +40,9 @@ export interface OrderItem {
   produto_id: number;
   quantidade: number;
   preco_unitario: number;
+  produtos?: {
+    nome: string;
+  };
   name?: string; // For UI convenience
 }
 
