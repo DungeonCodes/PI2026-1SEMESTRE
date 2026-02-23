@@ -57,7 +57,7 @@ export const StockProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       .from('pedidos')
       .select('*, itens_pedido(*, produtos(nome))')
       .order('criado_em', { ascending: false });
-    
+
     if (error) {
         console.error('Error fetching orders:', error);
         setOrders([]);

@@ -10,6 +10,9 @@ const Kitchen: React.FC = () => {
   const { settings } = useConfig();
   const { user } = useAuth();
 
+  const pendentes = orders.filter(p => p.status?.toLowerCase() === 'pendente');
+  const prontos = orders.filter(p => p.status?.toLowerCase() === 'pronto');
+
   return (
     <div className="p-4 max-w-7xl mx-auto">
       <h2 
@@ -25,8 +28,7 @@ const Kitchen: React.FC = () => {
             Pendentes
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {orders
-              .filter((order) => order.status === 'Pendente')
+            {pendentes
               .map((order) => (
                 <div key={order.id} className="bg-gray-800/80 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-white/5">
                   <div className="flex justify-between items-center mb-4">
@@ -49,7 +51,7 @@ const Kitchen: React.FC = () => {
                   </button>
                 </div>
               ))}
-            {orders.filter(o => o.status === 'Pendente').length === 0 && (
+            {pendentes.length === 0 && (
               <p className="text-gray-500 italic">Nenhum pedido pendente.</p>
             )}
           </div>
@@ -61,8 +63,7 @@ const Kitchen: React.FC = () => {
             Prontos para Entrega
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {orders
-              .filter((order) => order.status === 'Pronto')
+            {prontos
               .map((order) => (
                 <div key={order.id} className="bg-green-900/40 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-green-500/20">
                   <h3 className="text-xl font-bold mb-4">Pedido #{order.id}</h3>
@@ -82,7 +83,7 @@ const Kitchen: React.FC = () => {
                   </button>
                 </div>
               ))}
-            {orders.filter(o => o.status === 'Pronto').length === 0 && (
+            {prontos.length === 0 && (
               <p className="text-gray-500 italic">Nenhum pedido pronto.</p>
             )}
           </div>
